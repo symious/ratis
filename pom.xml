@@ -197,10 +197,10 @@
 
     <distMgmtSnapshotsId>data-infra-snapshot</distMgmtSnapshotsId>
     <distMgmtSnapshotsName>Shopee Data Infra Snapshot Repository</distMgmtSnapshotsName>
-    <distMgmtSnapshotsUrl>http://nexus-repo.datainfra.shopee.io:8081/repository/maven-snapshot/</distMgmtSnapshotsUrl>
+    <distMgmtSnapshotsUrl>https://di-nexus-repo.idata.shopeemobile.com/repository/maven-snapshot/</distMgmtSnapshotsUrl>
     <distMgmtStagingId>data-infra-release</distMgmtStagingId>
     <distMgmtStagingName>Shopee Data Infra Release Repository</distMgmtStagingName>
-    <distMgmtStagingUrl>http://nexus-repo.datainfra.shopee.io:8081/repository/maven-release/</distMgmtStagingUrl>
+    <distMgmtStagingUrl>https://di-nexus-repo.idata.shopeemobile.com/repository/maven-release/</distMgmtStagingUrl>
 
     <shell-executable>bash</shell-executable>
 
