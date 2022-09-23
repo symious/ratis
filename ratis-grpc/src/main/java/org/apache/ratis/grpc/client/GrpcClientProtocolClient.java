@@ -96,14 +96,21 @@ public class GrpcClientProtocolClient implements Closeable {
   private final AtomicReference<AsyncStreamObservers> unorderedStreamObservers = new AtomicReference<>();
   private final MetricClientInterceptor metricClientInterceptor;
 
+  // SPDI-59793 disbale this meteics to avoid metrics leak
+  private final boolean enableMetricClientInterceptor;
+
   GrpcClientProtocolClient(ClientId id, RaftPeer target, RaftProperties properties,
       GrpcTlsConfig adminTlsConfig, GrpcTlsConfig clientTlsConfig) {
+    this.enableMetricClientInterceptor = GrpcConfigKeys.metricsClientInterceptorEnabled(properties, LOG::debug);
     this.name = JavaUtils.memoize(() -> id + "->" + target.getId());
     this.target = target;
     final SizeInBytes flowControlWindow = GrpcConfigKeys.flowControlWindow(properties, LOG::debug);
     final SizeInBytes maxMessageSize = GrpcConfigKeys.messageSizeMax(properties, LOG::debug);
-    metricClientInterceptor = new MetricClientInterceptor(getName());
-
+    if (enableMetricClientInterceptor) {
+      metricClientInterceptor = new MetricClientInterceptor(getName());
+    } else {
+      metricClientInterceptor = null;
+    }
     final String clientAddress = Optional.ofNullable(target.getClientAddress())
         .filter(x -> !x.isEmpty()).orElse(target.getAddress());
     final String adminAddress = Optional.ofNullable(target.getAdminAddress())
@@ -148,10 +155,14 @@ public class GrpcClientProtocolClient implements Closeable {
       channelBuilder.negotiationType(NegotiationType.PLAINTEXT);
     }
 
-    return channelBuilder.flowControlWindow(flowControlWindow.getSizeInt())
-        .maxInboundMessageSize(maxMessageSize.getSizeInt())
-        .intercept(metricClientInterceptor)
-        .build();
+    channelBuilder.flowControlWindow(flowControlWindow.getSizeInt())
+        .maxInboundMessageSize(maxMessageSize.getSizeInt());
+
+    if (enableMetricClientInterceptor) {
+      channelBuilder.intercept(metricClientInterceptor);
+    }
+
+    return channelBuilder.build();
   }
 
   String getName() {
@@ -166,7 +177,9 @@ public class GrpcClientProtocolClient implements Closeable {
     if (clientChannel != adminChannel) {
       GrpcUtil.shutdownManagedChannel(adminChannel);
     }
-    metricClientInterceptor.close();
+    if (enableMetricClientInterceptor) {
+      metricClientInterceptor.close();
+    }
   }
 
   RaftClientReplyProto groupAdd(GroupManagementRequestProto request) throws IOException {

@@ -314,6 +314,21 @@ public interface GrpcConfigKeys {
     setSizeInBytes(properties::set, FLOW_CONTROL_WINDOW_KEY, flowControlWindowSize);
   }
 
+  String METRICS_CLIENT_INTERCEPTOR_ENABLED_KEY = PREFIX + ".metrics.client.interceptor.enable";
+  boolean METRICS_CLIENT_INTERCEPTOR_ENABLED_DEFAULT = true;
+
+  static boolean metricsClientInterceptorEnabled(RaftProperties properties, Consumer<String> logger) {
+    return getBoolean(properties::getBoolean,
+        METRICS_CLIENT_INTERCEPTOR_ENABLED_KEY,
+        METRICS_CLIENT_INTERCEPTOR_ENABLED_DEFAULT, logger);
+  }
+
+  static void setMetricsClientInterceptorEnabled(RaftProperties properties,
+      boolean enablemetricsClientInterceptorEnable) {
+    setBoolean(properties::setBoolean, METRICS_CLIENT_INTERCEPTOR_ENABLED_KEY,
+        enablemetricsClientInterceptorEnable);
+  }
+
   static void main(String[] args) {
     printAll(GrpcConfigKeys.class);
   }
