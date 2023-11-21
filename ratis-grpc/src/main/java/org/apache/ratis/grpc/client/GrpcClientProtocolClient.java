@@ -101,7 +101,7 @@ public class GrpcClientProtocolClient implements Closeable {
 
   GrpcClientProtocolClient(ClientId id, RaftPeer target, RaftProperties properties,
       GrpcTlsConfig adminTlsConfig, GrpcTlsConfig clientTlsConfig) {
-    this.enableMetricClientInterceptor = GrpcConfigKeys.metricsClientInterceptorEnabled(properties, LOG::debug);
+    this.enableMetricClientInterceptor = GrpcConfigKeys.metricsClientInterceptorEnable(properties, LOG::debug);
     this.name = JavaUtils.memoize(() -> id + "->" + target.getId());
     this.target = target;
     final SizeInBytes flowControlWindow = GrpcConfigKeys.flowControlWindow(properties, LOG::debug);
