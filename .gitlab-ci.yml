@@ -1,0 +1,113 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+variables:
+  MAVEN_CLI_OPTS: "-s /usr/local/.m2/settings.xml --batch-mode"
+  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository 
+               -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false 
+               -Dmaven.wagon.http.retryHandler.class=standard 
+               -Dmaven.wagon.http.retryHandler.count=3"
+
+default:
+  before_script:
+    - env
+
+cache:
+  paths:
+    - .m2/repository
+    - target/
+
+stages:
+  - ci
+  - compile
+
+.parallel-unit-job:
+  parallel:
+    matrix:
+      - PROFILE: [grpc, server, misc]
+
+build:
+  stage: ci
+  tags:
+    - ratis
+  script:
+    - ./dev-support/checks/build.sh -Prelease assembly:single
+  artifacts:
+    name: ratis-src
+    paths:
+      - ratis-assembly/target/apache-ratis-*-src.tar.gz
+    expire_in: 1 day
+  interruptible: true
+
+compile:
+  stage: compile
+  needs:
+    - build
+  tags:
+    - ratis
+  script:
+    - tar --strip-components 1 -xzvf ratis-assembly/target/apache-ratis-*-src.tar.gz
+    - ./dev-support/checks/build.sh
+  interruptible: true
+
+rat:
+  stage: ci
+  tags:
+    - ratis
+  script:
+    - ./dev-support/checks/rat.sh
+  artifacts:
+    paths:
+      - target/rat/*
+    expire_in: 3 days
+  interruptible: true
+
+unit:
+  extends: .parallel-unit-job
+  stage: ci
+  tags:
+    - ratis
+  script:
+    - ./dev-support/checks/unit.sh -P$PROFILE-tests
+    - cat target/unit/summary.txt
+  artifacts:
+    paths:
+      - target/unit/*
+    expire_in: 3 days
+  interruptible: true
+
+checkstyle:
+  stage: ci
+  tags:
+    - ratis
+  script:
+    - ./dev-support/checks/checkstyle.sh
+  artifacts:
+    paths:
+      - target/checkstyle/*
+    expire_in: 3 days
+  interruptible: true
+
+findbugs:
+  stage: ci
+  tags:
+    - ratis
+  script:
+    - ./dev-support/checks/findbugs.sh
+  artifacts:
+    paths:
+      - target/findbugs/*
+    expire_in: 3 days
+  interruptible: true

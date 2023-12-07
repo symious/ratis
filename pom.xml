@@ -696,6 +696,7 @@
             <excludes combine.children="append">
               <exclude>.github/*.md</exclude>
               <exclude>target/*</exclude>
+              <exclude>.m2/**</exclude>
             </excludes>
           </configuration>
         </plugin>
