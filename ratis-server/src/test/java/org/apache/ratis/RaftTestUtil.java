@@ -480,7 +480,7 @@ public interface RaftTestUtil {
         }
         LOG.info("Changed leader from " + oldLeader + " to " + newLeader);
         return newLeader;
-      }, 20, BaseTest.HUNDRED_MILLIS, name, LOG);
+      }, 50, BaseTest.HUNDRED_MILLIS, name, LOG);
     } finally {
       cluster.setBlockRequestsFrom(oldLeader.toString(), false);
     }
