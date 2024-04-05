@@ -457,7 +457,7 @@ public interface SlidingWindow {
     public synchronized void receivedRequest(REQUEST request, Consumer<REQUEST> processingMethod) {
       final long seqNum = request.getSeqNum();
       final boolean accepted;
-      if (nextToProcess == -1 && (request.isFirstRequest() || seqNum == 0)) {
+      if (nextToProcess == -1 && (request.isFirstRequest() || seqNum == 1)) {
         nextToProcess = seqNum;
         requests.putNewRequest(request);
         LOG.debug("Received seq={} (first request), {}", seqNum, this);
