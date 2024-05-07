@@ -44,7 +44,9 @@ public class AwaitToRun implements AutoCloseable {
     public void run() {
       while(!Thread.currentThread().isInterrupted()) {
         try {
+          System.out.println("YYYY Before awaitForSignal.await()");
           awaitForSignal.await();
+          System.out.println("YYYY After awaitForSignal.await()");
         } catch (InterruptedException e) {
           LOG.info("{} is interrupted", awaitForSignal);
           Thread.currentThread().interrupt();

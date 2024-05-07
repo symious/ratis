@@ -448,12 +448,14 @@ public class SegmentedRaftLogCache {
 
   boolean shouldEvict() {
     final CacheInfo closedSegmentsCacheInfo = closedSegments.getCacheInfo();
+    System.out.println("YYYY: should: " + (closedSegmentsCacheInfo.getCount() > maxCachedSegments) + ", closedSegmentsCacheInfo.getCount(): " + closedSegmentsCacheInfo.getCount() + ", maxCachedSegments: " + maxCachedSegments);
     if (closedSegmentsCacheInfo.getCount() > maxCachedSegments) {
       return true;
     }
 
     final long size = closedSegmentsCacheInfo.getSize()
         + Optional.ofNullable(openSegment).map(LogSegment::getTotalCacheSize).orElse(0L);
+    System.out.println("YYYY: should: " + (size > maxSegmentCacheSize) + " size: " + size + ", maxSegmentCacheSize: " + maxSegmentCacheSize);
     return size > maxSegmentCacheSize;
   }
 

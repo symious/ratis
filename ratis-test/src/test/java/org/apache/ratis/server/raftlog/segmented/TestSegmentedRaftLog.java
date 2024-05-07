@@ -442,7 +442,8 @@ public class TestSegmentedRaftLog extends BaseTest {
   private void checkEntries(RaftLog raftLog, List<LogEntryProto> expected,
       int offset, int size) throws IOException {
     if (size > 0) {
-      for (int i = offset; i < size + offset; i++) {
+      int i = offset;
+      for (; i < size + offset; i++) {
         LogEntryProto entry = raftLog.get(expected.get(i).getIndex());
         Assertions.assertEquals(expected.get(i), entry);
       }
