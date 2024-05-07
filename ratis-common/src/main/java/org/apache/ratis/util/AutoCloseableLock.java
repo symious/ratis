@@ -17,6 +17,9 @@
  */
 package org.apache.ratis.util;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 
@@ -25,6 +28,7 @@ import java.util.concurrent.locks.Lock;
  * so that the {@link #close()} method will unlock the lock.
  */
 public final class AutoCloseableLock implements AutoCloseable {
+  static final Logger LOG = LoggerFactory.getLogger(AutoCloseableLock.class);
   /**
    * Acquire the given lock and then wrap it with {@link AutoCloseableLock}
    * so that the given lock can be released by calling {@link #close()},
@@ -41,7 +45,14 @@ public final class AutoCloseableLock implements AutoCloseable {
 
   @SuppressWarnings("java:S2222") // Locks should be release by calling {@link #close()}
   public static AutoCloseableLock acquire(final Lock lock, Runnable preUnlock) {
+    return acquire(lock, preUnlock, false);
+  }
+
+  public static AutoCloseableLock acquire(final Lock lock, Runnable preUnlock, boolean log) {
     lock.lock();
+    if (log) {
+      LOG.info("Thread: " + Thread.currentThread().getName() + " acquired lock: " + lock);
+    }
     return new AutoCloseableLock(lock, preUnlock);
   }
 

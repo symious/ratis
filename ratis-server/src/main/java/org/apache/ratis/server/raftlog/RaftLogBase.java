@@ -393,11 +393,23 @@ public abstract class RaftLogBase implements RaftLog {
   }
 
   public AutoCloseableLock readLock() {
-    return AutoCloseableLock.acquire(lock.readLock());
+    Runnable log = new Runnable() {
+      @Override
+      public void run() {
+        LOG.info("Thread " + Thread.currentThread() + " released " + lock.readLock());
+      }
+    };
+    return AutoCloseableLock.acquire(lock.readLock(), log, true);
   }
 
   public AutoCloseableLock writeLock() {
-    return AutoCloseableLock.acquire(lock.writeLock());
+    Runnable log = new Runnable() {
+      @Override
+      public void run() {
+        LOG.info("Thread " + Thread.currentThread() + " released " + lock.writeLock());
+      }
+    };
+    return AutoCloseableLock.acquire(lock.writeLock(), log, true);
   }
 
   public boolean hasWriteLock() {
