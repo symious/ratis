@@ -52,4 +52,8 @@ class StreamMap<STREAM> {
     LOG.debug("remove({}) returns {}", key, info);
     return info;
   }
+
+  public int size() {
+    return map.size();
+  }
 }
