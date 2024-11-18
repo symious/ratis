@@ -409,6 +409,13 @@ public class DataStreamManagement {
   void read(DataStreamRequestByteBuf request, ChannelHandlerContext ctx,
       CheckedBiFunction<RaftClientRequest, Set<RaftPeer>, Set<DataStreamOutputImpl>, IOException> getStreams) {
     LOG.debug("{}: read {}", this, request);
+    if (request.getType() == Type.STREAM_CANCELER) {
+      ClientInvocationId key = ClientInvocationId.valueOf(request.getClientId(), request.getStreamId());
+      request.release();
+      removeDataStream(key, null);
+      LOG.info("Canceling and cleanup clientInvocationIds={}", key);
+      return;
+    }
     try {
       readImpl(request, ctx, getStreams);
     } catch (Throwable t) {

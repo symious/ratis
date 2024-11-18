@@ -21,6 +21,7 @@ package org.apache.ratis.netty.client;
 import org.apache.ratis.client.DataStreamClientRpc;
 import org.apache.ratis.client.RaftClientConfigKeys;
 import org.apache.ratis.conf.RaftProperties;
+import org.apache.ratis.datastream.impl.DataStreamPacketByteBuffer;
 import org.apache.ratis.datastream.impl.DataStreamRequestByteBuf;
 import org.apache.ratis.datastream.impl.DataStreamRequestByteBuffer;
 import org.apache.ratis.datastream.impl.DataStreamRequestFilePositionCount;
@@ -29,9 +30,11 @@ import org.apache.ratis.io.WriteOption;
 import org.apache.ratis.netty.NettyConfigKeys;
 import org.apache.ratis.netty.NettyDataStreamUtils;
 import org.apache.ratis.netty.NettyUtils;
+import org.apache.ratis.proto.RaftProtos;
 import org.apache.ratis.protocol.ClientInvocationId;
 import org.apache.ratis.protocol.DataStreamReply;
 import org.apache.ratis.protocol.DataStreamRequest;
+import org.apache.ratis.protocol.DataStreamRequestHeader;
 import org.apache.ratis.protocol.RaftPeer;
 import org.apache.ratis.protocol.exceptions.AlreadyClosedException;
 import org.apache.ratis.protocol.exceptions.TimeoutIOException;
@@ -76,6 +79,8 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static org.apache.ratis.datastream.impl.DataStreamPacketByteBuffer.EMPTY_BYTE_BUFFER;
+import static org.apache.ratis.io.StandardWriteOption.CLOSE;
+import static org.apache.ratis.proto.RaftProtos.DataStreamPacketHeaderProto.Type.STREAM_CANCELER;
 
 public class NettyClientStreamRpc implements DataStreamClientRpc {
   public static final Logger LOG = LoggerFactory.getLogger(NettyClientStreamRpc.class);
@@ -256,7 +261,7 @@ public class NettyClientStreamRpc implements DataStreamClientRpc {
     private long bytes;
 
     private boolean shouldFlush(List<WriteOption> options, int countMin, SizeInBytes bytesMin) {
-      if (options.contains(StandardWriteOption.CLOSE)) {
+      if (options.contains(CLOSE)) {
         // flush in order to send the CLOSE option.
         return true;
       } else if (bytes == 0 && count == 0) {
@@ -435,7 +440,7 @@ public class NettyClientStreamRpc implements DataStreamClientRpc {
   public CompletableFuture<DataStreamReply> streamAsync(DataStreamRequest request) {
     final CompletableFuture<DataStreamReply> f = new CompletableFuture<>();
     ClientInvocationId clientInvocationId = ClientInvocationId.valueOf(request.getClientId(), request.getStreamId());
-    final boolean isClose = request.getWriteOptionList().contains(StandardWriteOption.CLOSE);
+    final boolean isClose = request.getWriteOptionList().contains(CLOSE);
 
     final NettyClientReplies.ReplyMap replyMap = replies.getReplyMap(clientInvocationId);
     final ChannelFuture channelFuture;
@@ -471,6 +476,15 @@ public class NettyClientStreamRpc implements DataStreamClientRpc {
             f.completeExceptionally(new TimeoutIOException(
                 "Timeout " + timeout + ": Failed to send " + request + " via channel " + channel));
             replyMap.fail(requestEntry);
+            // Send cancel request to the server
+            DataStreamRequest cancelRequest = createCancelRequest(request);
+            channel.writeAndFlush(cancelRequest).addListener(cancelFuture -> {
+              if (!cancelFuture.isSuccess()) {
+                LOG.warn("{}: Failed to send cancel request for {} to server: {}", this, request, cancelFuture.cause());
+              } else {
+                LOG.debug("{}: Sent cancel request for {} to server.", this, request);
+              }
+            });
           }
         }, timeout.getDuration(), timeout.getUnit()));
       }
@@ -493,5 +507,11 @@ public class NettyClientStreamRpc implements DataStreamClientRpc {
   @Override
   public String toString() {
     return name;
+  }
+
+  private DataStreamRequest createCancelRequest(DataStreamRequest originalRequest) {
+    final DataStreamRequestHeader h =
+        new DataStreamRequestHeader(originalRequest.getClientId(), STREAM_CANCELER, originalRequest.getStreamId(), originalRequest.getStreamOffset() + originalRequest.getDataLength(), 0, CLOSE);
+    return new DataStreamRequestByteBuffer(h, DataStreamPacketByteBuffer.EMPTY_BYTE_BUFFER);
   }
 }
