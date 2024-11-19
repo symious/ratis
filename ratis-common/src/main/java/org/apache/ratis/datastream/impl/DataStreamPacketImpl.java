@@ -32,6 +32,7 @@ public abstract class DataStreamPacketImpl implements DataStreamPacket {
   private final Type type;
   private final long streamId;
   private final long streamOffset;
+  private long timeoutMs = -1L;
 
   protected DataStreamPacketImpl(ClientId clientId, Type type, long streamId, long streamOffset) {
     this.clientId = clientId;
@@ -58,6 +59,14 @@ public abstract class DataStreamPacketImpl implements DataStreamPacket {
   @Override
   public long getStreamOffset() {
     return streamOffset;
+  }
+
+  public long getTimeoutMs() {
+    return timeoutMs;
+  }
+
+  public void setTimeoutMs(long timeoutMs) {
+    this.timeoutMs = timeoutMs;
   }
 
   @Override

@@ -353,6 +353,7 @@ message DataStreamPacketHeaderProto {
   uint64 streamOffset = 4;
   uint64 dataLength = 5;
   repeated Option options = 6;
+  uint64 timeoutMs = 7;
 }
 
 message DataStreamRequestHeaderProto {

@@ -442,6 +442,7 @@ public class NettyClientStreamRpc implements DataStreamClientRpc {
     final Channel channel;
     final NettyClientReplies.RequestEntry requestEntry = new NettyClientReplies.RequestEntry(request);
     final NettyClientReplies.ReplyEntry replyEntry;
+    final TimeDuration timeout = isClose ? closeTimeout : requestTimeout;
     LOG.debug("{}: write begin {}", this, request);
     synchronized (replyMap) {
       channel = connection.getChannelUninterruptibly();
@@ -452,6 +453,7 @@ public class NettyClientStreamRpc implements DataStreamClientRpc {
       replyEntry = replyMap.submitRequest(requestEntry, isClose, f);
       final Function<DataStreamRequest, ChannelFuture> writeMethod = outstandingRequests.shouldFlush(
           flushRequestCountMin, flushRequestBytesMin, request)? channel::writeAndFlush: channel::write;
+      request.setTimeoutMs(System.currentTimeMillis() + (long)(timeout.toLong(TimeUnit.MILLISECONDS) * 1.2));
       channelFuture = writeMethod.apply(request);
     }
     channelFuture.addListener(future -> {
@@ -464,7 +466,6 @@ public class NettyClientStreamRpc implements DataStreamClientRpc {
       } else {
         LOG.debug("{}: write after {}", this, request);
 
-        final TimeDuration timeout = isClose ? closeTimeout : requestTimeout;
         replyEntry.scheduleTimeout(() -> channel.eventLoop().schedule(() -> {
           if (!f.isDone()) {
             f.completeExceptionally(new TimeoutIOException(

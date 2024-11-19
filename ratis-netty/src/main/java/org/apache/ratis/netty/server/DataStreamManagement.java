@@ -435,39 +435,50 @@ public class DataStreamManagement {
     }
     final boolean close = request.getWriteOptionList().contains(StandardWriteOption.CLOSE);
     ClientInvocationId key =  ClientInvocationId.valueOf(request.getClientId(), request.getStreamId());
+    long curTimeMs = System.currentTimeMillis();
+    if (request.getTimeoutMs() != -1L && curTimeMs > request.getTimeoutMs()) {
+      throw new IllegalStateException("Timeout request " + request + ", now: " + curTimeMs + " > " + request.getTimeoutMs());
+    }
 
     // add to ChannelMap
     final ChannelId channelId = ctx.channel().id();
     channels.add(channelId, key);
 
     final StreamInfo info;
-    if (request.getType() == Type.STREAM_HEADER) {
-      final MemoizedSupplier<StreamInfo> supplier = JavaUtils.memoize(
-          () -> newStreamInfo(request.slice(), getStreams));
-      info = streams.computeIfAbsent(key, id -> supplier.get());
-      if (!supplier.isInitialized()) {
-        throw new IllegalStateException("Failed to create a new stream for " + request
-            + " since a stream already exists Key: " + key + " StreamInfo:" + info);
-      }
-      getMetrics().onRequestCreate(RequestType.HEADER);
-    } else if (close) {
-      info = Optional.ofNullable(streams.remove(key)).orElseThrow(
-          () -> new IllegalStateException("Failed to remove StreamInfo for " + request));
-    } else {
-      info = Optional.ofNullable(streams.get(key)).orElseThrow(
-          () -> new IllegalStateException("Failed to get StreamInfo for " + request));
-    }
-
     final CompletableFuture<Long> localWrite;
     final List<CompletableFuture<DataStreamReply>> remoteWrites;
-    if (request.getType() == Type.STREAM_HEADER) {
-      localWrite = CompletableFuture.completedFuture(0L);
-      remoteWrites = Collections.emptyList();
-    } else if (request.getType() == Type.STREAM_DATA) {
-      localWrite = info.getLocal().write(request.slice(), request.getWriteOptionList(), writeExecutor);
-      remoteWrites = info.applyToRemotes(out -> out.write(request, requestExecutor));
-    } else {
-      throw new IllegalStateException(this + ": Unexpected type " + request.getType() + ", request=" + request);
+    try {
+      if (request.getType() == Type.STREAM_HEADER) {
+        final MemoizedSupplier<StreamInfo> supplier = JavaUtils.memoize(
+            () -> newStreamInfo(request.slice(), getStreams));
+        info = streams.computeIfAbsent(key, id -> supplier.get());
+        if (!supplier.isInitialized()) {
+          throw new IllegalStateException("Failed to create a new stream for " + request
+              + " since a stream already exists Key: " + key + " StreamInfo:" + info);
+        }
+        getMetrics().onRequestCreate(RequestType.HEADER);
+      } else if (close) {
+        info = Optional.ofNullable(streams.remove(key)).orElseThrow(
+            () -> new IllegalStateException("Failed to remove StreamInfo for " + request));
+      } else {
+        info = Optional.ofNullable(streams.get(key)).orElseThrow(
+            () -> new IllegalStateException("Failed to get StreamInfo for " + request));
+      }
+
+      if (request.getType() == Type.STREAM_HEADER) {
+        localWrite = CompletableFuture.completedFuture(0L);
+        remoteWrites = Collections.emptyList();
+      } else if (request.getType() == Type.STREAM_DATA) {
+        localWrite =
+            info.getLocal().write(request.slice(), request.getWriteOptionList(), writeExecutor);
+        remoteWrites = info.applyToRemotes(out -> out.write(request, requestExecutor));
+      } else {
+        throw new IllegalStateException(
+            this + ": Unexpected type " + request.getType() + ", request=" + request);
+      }
+    } catch (Throwable t) {
+      channels.remove(channelId, key);
+      throw t;
     }
 
     composeAsync(info.getPrevious(), requestExecutor, n -> JavaUtils.allOf(remoteWrites)

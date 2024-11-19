@@ -29,4 +29,11 @@ public interface DataStreamRequest extends DataStreamPacket {
   default WriteOption[] getWriteOptions() {
     return getWriteOptionList().toArray(WriteOption.EMPTY_ARRAY);
   }
+
+  default long getTimeoutMs() {
+    return -1L;
+  }
+
+  default void setTimeoutMs(long timeoutMs) {
+  }
 }

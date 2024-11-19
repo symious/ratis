@@ -40,17 +40,19 @@ import java.util.concurrent.atomic.AtomicReference;
 public class DataStreamRequestByteBuf extends DataStreamPacketImpl implements DataStreamRequest {
   private final AtomicReference<ByteBuf> buf;
   private final List<WriteOption> options;
+  private long timeoutMs = -1L;
 
   public DataStreamRequestByteBuf(ClientId clientId, Type type, long streamId, long streamOffset,
-                                  Iterable<WriteOption> options, ByteBuf buf) {
+                                  Iterable<WriteOption> options, long timeoutMs, ByteBuf buf) {
     super(clientId, type, streamId, streamOffset);
     this.buf = new AtomicReference<>(buf != null? buf.asReadOnly(): Unpooled.EMPTY_BUFFER);
     this.options = Collections.unmodifiableList(Lists.newArrayList(options));
+    this.timeoutMs = timeoutMs;
   }
 
   public DataStreamRequestByteBuf(DataStreamRequestHeader header, ByteBuf buf) {
     this(header.getClientId(), header.getType(), header.getStreamId(), header.getStreamOffset(),
-         header.getWriteOptionList(), buf);
+         header.getWriteOptionList(), header.getTimeoutMs(), buf);
   }
 
   ByteBuf getBuf() {
@@ -72,6 +74,14 @@ public class DataStreamRequestByteBuf extends DataStreamPacketImpl implements Da
     if (got != null) {
       got.release();
     }
+  }
+
+  public long getTimeoutMs() {
+    return timeoutMs;
+  }
+
+  public void setTimeoutMs(long timeoutMs) {
+    this.timeoutMs = timeoutMs;
   }
 
   @Override

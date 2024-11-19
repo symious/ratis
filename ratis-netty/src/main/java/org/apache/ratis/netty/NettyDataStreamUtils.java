@@ -65,7 +65,8 @@ public interface NettyDataStreamUtils {
         .setStreamId(request.getStreamId())
         .setStreamOffset(request.getStreamOffset())
         .setType(request.getType())
-        .setDataLength(request.getDataLength());
+        .setDataLength(request.getDataLength())
+        .setTimeoutMs(request.getTimeoutMs());
 
     request.getWriteOptionList().stream()
         .map(NettyDataStreamUtils::getOption)
@@ -195,8 +196,11 @@ public interface NettyDataStreamUtils {
           options[i] = StandardWriteOption.values()[h.getOptions(i).ordinal()];
         }
 
-        return new DataStreamRequestHeader(ClientId.valueOf(h.getClientId()), h.getType(), h.getStreamId(),
-            h.getStreamOffset(), h.getDataLength(), options);
+        DataStreamRequestHeader dataStreamRequestHeader =
+            new DataStreamRequestHeader(ClientId.valueOf(h.getClientId()), h.getType(), h.getStreamId(),
+                h.getStreamOffset(), h.getDataLength(), options);
+        dataStreamRequestHeader.setTimeoutMs(h.getTimeoutMs());
+        return dataStreamRequestHeader;
       } else {
         buf.resetReaderIndex();
         return null;

@@ -32,6 +32,7 @@ import java.util.List;
 public class DataStreamRequestHeader extends DataStreamPacketHeader implements DataStreamRequest {
 
   private final List<WriteOption> options;
+  private long timeoutMs = -1L;
 
   public DataStreamRequestHeader(ClientId clientId, Type type, long streamId, long streamOffset, long dataLength,
       WriteOption... options) {
@@ -42,6 +43,14 @@ public class DataStreamRequestHeader extends DataStreamPacketHeader implements D
                                  Iterable<WriteOption> options) {
     super(clientId, type, streamId, streamOffset, dataLength);
     this.options = Collections.unmodifiableList(CollectionUtils.distinct(options));
+  }
+
+  public long getTimeoutMs() {
+    return timeoutMs;
+  }
+
+  public void setTimeoutMs(long timeoutMs) {
+    this.timeoutMs = timeoutMs;
   }
 
   @Override
