@@ -77,6 +77,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -223,6 +224,7 @@ public class DataStreamManagement {
   private final TimeDuration requestTimeout;
 
   private final NettyServerStreamRpcMetrics nettyServerStreamRpcMetrics;
+  private AtomicLong index = new AtomicLong(0L);
 
   DataStreamManagement(RaftServer server, NettyServerStreamRpcMetrics metrics) {
     this.server = server;
@@ -428,7 +430,9 @@ public class DataStreamManagement {
 
   private void readImpl(DataStreamRequestByteBuf request, ChannelHandlerContext ctx,
       CheckedBiFunction<RaftClientRequest, Set<RaftPeer>, Set<DataStreamOutputImpl>, IOException> getStreams) {
-    LOG.debug("StreamMap size: " + streams.size());
+    if (index.getAndIncrement() % 1000 == 0) {
+      LOG.debug("Index: " + index.get() + ", StreamMap size: " + streams.size());
+    }
     final boolean close = request.getWriteOptionList().contains(StandardWriteOption.CLOSE);
     ClientInvocationId key =  ClientInvocationId.valueOf(request.getClientId(), request.getStreamId());
 
