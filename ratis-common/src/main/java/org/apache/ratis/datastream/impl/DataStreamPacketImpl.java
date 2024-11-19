@@ -76,6 +76,7 @@ public abstract class DataStreamPacketImpl implements DataStreamPacket {
         + ",type=" + getType()
         + ",id=" + getStreamId()
         + ",offset=" + getStreamOffset()
-        + ",length=" + getDataLength();
+        + ",length=" + getDataLength()
+        + ",timeoutMs=" + getTimeoutMs();
   }
 }
