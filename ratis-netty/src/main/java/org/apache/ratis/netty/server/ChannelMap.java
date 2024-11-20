@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /** Map: {@link ChannelId} -> {@link ClientInvocationId}s. */
 //class ChannelMap {
@@ -74,5 +75,17 @@ class ChannelMap {
           return keys;
         })
         .orElse(Collections.emptySet());
+  }
+
+  String getChannelSizes() {
+    return map.entrySet().stream()
+        .map(entry -> entry.getKey() + ": " + entry.getValue().size())
+        .collect(Collectors.joining(", "));
+  }
+
+  int getTotalSize() {
+    return map.values().stream()
+        .mapToInt(Map::size)
+        .sum();
   }
 }

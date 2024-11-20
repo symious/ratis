@@ -435,7 +435,7 @@ public class DataStreamManagement {
     long curTimeMs = System.currentTimeMillis();
     String op = request.getTimeoutMs() > curTimeMs ? " > " : " <= ";
     if (index.getAndIncrement() % 1000 == 0) {
-      LOG.debug("Index: " + index.get() + ", StreamMap size: " + streams.size() + ", timeoutMs: " + request.getTimeoutMs() + op +  " curMs: " + curTimeMs);
+      LOG.info("Index: " + index.get() + ", StreamMap size: " + streams.size() + ", Channels total size: " + channels.getTotalSize() + ", channels: " + channels.getChannelSizes() + ", timeoutMs: " + request.getTimeoutMs() + op +  " curMs: " + curTimeMs);
     }
     if (request.getTimeoutMs() != -1L && curTimeMs > request.getTimeoutMs()) {
       throw new IllegalStateException("Timeout request " + request + ", now: " + curTimeMs + " > " + request.getTimeoutMs());
