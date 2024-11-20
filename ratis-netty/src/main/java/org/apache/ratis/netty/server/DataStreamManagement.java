@@ -217,7 +217,7 @@ public class DataStreamManagement {
   private final RaftServer server;
   private final String name;
 
-  private final StreamMap<StreamInfo> streams = new StreamMap<>();
+  private final StreamMap<StreamInfo> streams;
   private final ChannelMap channels;
   private final ExecutorService requestExecutor;
   private final ExecutorService writeExecutor;
@@ -231,6 +231,7 @@ public class DataStreamManagement {
     this.name = server.getId() + "-" + JavaUtils.getClassSimpleName(getClass());
 
     this.channels = new ChannelMap();
+    this.streams = new StreamMap<>(channels);
     final RaftProperties properties = server.getProperties();
     final boolean useCachedThreadPool = RaftServerConfigKeys.DataStream.asyncRequestThreadPoolCached(properties);
     this.requestExecutor = ConcurrentUtils.newThreadPoolWithMax(useCachedThreadPool,
@@ -389,9 +390,9 @@ public class DataStreamManagement {
     }
   }
 
-  void cleanUp(Set<ClientInvocationId> ids) {
+  void cleanUp(ChannelId channelId, Set<ClientInvocationId> ids) {
     for (ClientInvocationId clientInvocationId : ids) {
-      Optional.ofNullable(streams.remove(clientInvocationId))
+      Optional.ofNullable(streams.remove(channelId, clientInvocationId))
           .map(StreamInfo::getLocal)
           .ifPresent(LocalStream::cleanUp);
     }
@@ -401,7 +402,7 @@ public class DataStreamManagement {
     // Delayed memory garbage cleanup
     Optional.ofNullable(channels.remove(channelId)).ifPresent(ids -> {
       LOG.info("Channel {} is inactive, cleanup clientInvocationIds={}", channelId, ids);
-      TimeoutExecutor.getInstance().onTimeout(channelInactiveGracePeriod, () -> cleanUp(ids),
+      TimeoutExecutor.getInstance().onTimeout(channelInactiveGracePeriod, () -> cleanUp(channelId, ids),
           LOG, () -> "Timeout check failed, clientInvocationIds=" + ids);
     });
   }
@@ -413,12 +414,12 @@ public class DataStreamManagement {
       readImpl(request, ctx, getStreams);
     } catch (Throwable t) {
       replyDataStreamException(t, request, ctx);
-      removeDataStream(ClientInvocationId.valueOf(request.getClientId(), request.getStreamId()), null);
+      removeDataStream(ctx.channel().id(), ClientInvocationId.valueOf(request.getClientId(), request.getStreamId()), null);
     }
   }
 
-  private void removeDataStream(ClientInvocationId invocationId, StreamInfo info) {
-    final StreamInfo removed = streams.remove(invocationId);
+  private void removeDataStream(ChannelId id, ClientInvocationId invocationId, StreamInfo info) {
+    final StreamInfo removed = streams.remove(id, invocationId);
     if (info == null) {
       info = removed;
     }
@@ -456,14 +457,14 @@ public class DataStreamManagement {
       if (request.getType() == Type.STREAM_HEADER) {
         final MemoizedSupplier<StreamInfo> supplier = JavaUtils.memoize(
             () -> newStreamInfo(request.slice(), getStreams));
-        info = streams.computeIfAbsent(key, id -> supplier.get());
+        info = streams.computeIfAbsent(channelId, key, id -> supplier.get());
         if (!supplier.isInitialized()) {
           throw new IllegalStateException("Failed to create a new stream for " + request
               + " since a stream already exists Key: " + key + " StreamInfo:" + info);
         }
         getMetrics().onRequestCreate(RequestType.HEADER);
       } else if (close) {
-        info = Optional.ofNullable(streams.remove(key)).orElseThrow(
+        info = Optional.ofNullable(streams.remove(channelId, key)).orElseThrow(
             () -> new IllegalStateException("Failed to remove StreamInfo for " + request));
       } else {
         info = Optional.ofNullable(streams.get(key)).orElseThrow(
@@ -500,7 +501,7 @@ public class DataStreamManagement {
       try {
         if (exception != null) {
           replyDataStreamException(server, exception, info.getRequest(), request, ctx);
-          removeDataStream(key, info);
+          removeDataStream(channelId, key, info);
         }
       } finally {
         request.release();

@@ -18,6 +18,7 @@
 package org.apache.ratis.netty.server;
 
 import org.apache.ratis.protocol.ClientInvocationId;
+import org.apache.ratis.thirdparty.io.netty.channel.ChannelId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,12 +34,18 @@ import java.util.function.Function;
 class StreamMap<STREAM> {
   public static final Logger LOG = LoggerFactory.getLogger(StreamMap.class);
 
+  private ChannelMap channelMap;
+  public StreamMap(ChannelMap channelMap) {
+    this.channelMap = channelMap;
+  }
+
   private final ConcurrentMap<ClientInvocationId, STREAM> map = new ConcurrentHashMap<>();
 
-  STREAM computeIfAbsent(ClientInvocationId key, Function<ClientInvocationId, STREAM> function) {
+  STREAM computeIfAbsent(ChannelId channelId, ClientInvocationId key, Function<ClientInvocationId, STREAM> function) {
     // 包装传入的 Function，以便在计算时打印日志
     Function<ClientInvocationId, STREAM> loggingFunction = k -> {
       LOG.debug("[StreamMap] New STREAM computed for key: " + k);
+      channelMap.add(channelId, key);
       return function.apply(k);
     };
     final STREAM info = map.computeIfAbsent(key, loggingFunction);
@@ -52,8 +59,9 @@ class StreamMap<STREAM> {
     return info;
   }
 
-  STREAM remove(ClientInvocationId key) {
+  STREAM remove(ChannelId channelId, ClientInvocationId key) {
     final STREAM info = map.remove(key);
+    channelMap.remove(channelId, key);
     LOG.debug("[StreamMap] Remove({}) returns {}", key, info);
     return info;
   }
