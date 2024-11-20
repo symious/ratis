@@ -19,6 +19,8 @@ package org.apache.ratis.netty.server;
 
 import org.apache.ratis.protocol.ClientInvocationId;
 import org.apache.ratis.thirdparty.io.netty.channel.ChannelId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -50,11 +52,15 @@ import java.util.stream.Collectors;
 //}
 
 class ChannelMap {
+
+  public static final Logger LOG = LoggerFactory.getLogger(StreamMap.class);
   private final Map<ChannelId, Map<ClientInvocationId, Integer>> map = new ConcurrentHashMap<>();
 
   void add(ChannelId channelId, ClientInvocationId clientInvocationId) {
-    map.computeIfAbsent(channelId, (e) -> new ConcurrentHashMap<>())
+    map.computeIfAbsent(channelId, e -> new ConcurrentHashMap<>())
         .merge(clientInvocationId, 1, Integer::sum); // 如果存在，计数加1；否则初始化为1
+    Integer count = map.get(channelId).get(clientInvocationId);
+    LOG.debug("[ChannelMap] Added channelId={}, clientInvocationId={}, count={}", channelId, clientInvocationId, count);
   }
 
   void remove(ChannelId channelId, ClientInvocationId clientInvocationId) {
@@ -65,16 +71,22 @@ class ChannelMap {
             map.remove(channelId); // 如果内部Map为空，移除ChannelId
           }
         });
+    Integer count = Optional.ofNullable(map.get(channelId))
+        .map(ids -> ids.get(clientInvocationId))
+        .orElse(null);
+    LOG.debug("[ChannelMap] Removed channelId={}, clientInvocationId={}, remainingCount={}", channelId, clientInvocationId, count);
   }
 
   Set<ClientInvocationId> remove(ChannelId channelId) {
-    return Optional.ofNullable(map.remove(channelId))
+    Set<ClientInvocationId> set = Optional.ofNullable(map.remove(channelId))
         .map(ids -> {
           Set<ClientInvocationId> keys = new HashSet<>(ids.keySet());
           ids.clear(); // 清空内部Map
           return keys;
         })
         .orElse(Collections.emptySet());
+    LOG.debug("[ChannelMap] removing channel: " + channelId + ", invocationIds: " + set);
+    return set;
   }
 
   String getChannelSizes() {

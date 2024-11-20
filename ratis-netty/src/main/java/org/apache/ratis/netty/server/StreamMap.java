@@ -36,20 +36,25 @@ class StreamMap<STREAM> {
   private final ConcurrentMap<ClientInvocationId, STREAM> map = new ConcurrentHashMap<>();
 
   STREAM computeIfAbsent(ClientInvocationId key, Function<ClientInvocationId, STREAM> function) {
+    // 包装传入的 Function，以便在计算时打印日志
+    Function<ClientInvocationId, STREAM> loggingFunction = k -> {
+      LOG.debug("[StreamMap] New STREAM computed for key: " + k);
+      return function.apply(k);
+    };
     final STREAM info = map.computeIfAbsent(key, function);
-    LOG.debug("computeIfAbsent({}) returns {}", key, info);
+//    LOG.debug("computeIfAbsent({}) returns {}", key, info);
     return info;
   }
 
   STREAM get(ClientInvocationId key) {
     final STREAM info = map.get(key);
-    LOG.debug("get({}) returns {}", key, info);
+//    LOG.debug("get({}) returns {}", key, info);
     return info;
   }
 
   STREAM remove(ClientInvocationId key) {
     final STREAM info = map.remove(key);
-    LOG.debug("remove({}) returns {}", key, info);
+    LOG.debug("[StreamMap] Remove({}) returns {}", key, info);
     return info;
   }
 
