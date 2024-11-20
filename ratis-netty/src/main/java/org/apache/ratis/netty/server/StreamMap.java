@@ -41,7 +41,7 @@ class StreamMap<STREAM> {
       LOG.debug("[StreamMap] New STREAM computed for key: " + k);
       return function.apply(k);
     };
-    final STREAM info = map.computeIfAbsent(key, function);
+    final STREAM info = map.computeIfAbsent(key, loggingFunction);
 //    LOG.debug("computeIfAbsent({}) returns {}", key, info);
     return info;
   }
