@@ -393,8 +393,14 @@ public class DataStreamManagement {
   void cleanUp(ChannelId channelId, Set<ClientInvocationId> ids) {
     for (ClientInvocationId clientInvocationId : ids) {
       Optional.ofNullable(streams.remove(channelId, clientInvocationId))
-          .map(StreamInfo::getLocal)
-          .ifPresent(LocalStream::cleanUp);
+          .ifPresent(streamInfo -> {
+            // 执行 DataStreamMap 的清理逻辑
+            streamInfo.getDivision()
+                .getDataStreamMap()
+                .remove(clientInvocationId);
+            // 执行 LocalStream 的清理逻辑
+            streamInfo.getLocal().cleanUp();
+          });
     }
   }
 
