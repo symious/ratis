@@ -23,7 +23,7 @@
   <parent>
     <artifactId>ratis</artifactId>
     <groupId>org.apache.ratis</groupId>
-    <version>3.1.sdi-leak-fix-8</version>
+    <version>3.1.sdi-leak-fix-9</version>
     <relativePath>..</relativePath>
   </parent>
 
