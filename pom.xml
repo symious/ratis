@@ -24,7 +24,7 @@
 
   <artifactId>ratis</artifactId>
   <groupId>org.apache.ratis</groupId>
-  <version>3.1.sdi-leak-fix-6</version>
+  <version>3.1.sdi-leak-fix-7</version>
   <name>Apache Ratis</name>
   <packaging>pom</packaging>
   <description>
@@ -162,7 +162,7 @@
 
 
   <properties>
-    <project.build.outputTimestamp>2024-11-19T09:30:41Z</project.build.outputTimestamp>
+    <project.build.outputTimestamp>2024-11-20T05:07:10Z</project.build.outputTimestamp>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
      <!-- where to find the generated LICENSE files -->
