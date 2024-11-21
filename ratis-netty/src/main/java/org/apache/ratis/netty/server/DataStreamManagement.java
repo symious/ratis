@@ -22,8 +22,10 @@ import org.apache.ratis.client.RaftClientConfigKeys;
 import org.apache.ratis.client.impl.ClientProtoUtils;
 import org.apache.ratis.client.impl.DataStreamClientImpl.DataStreamOutputImpl;
 import org.apache.ratis.conf.RaftProperties;
+import org.apache.ratis.datastream.impl.DataStreamPacketByteBuffer;
 import org.apache.ratis.datastream.impl.DataStreamReplyByteBuffer;
 import org.apache.ratis.datastream.impl.DataStreamRequestByteBuf;
+import org.apache.ratis.datastream.impl.DataStreamRequestByteBuffer;
 import org.apache.ratis.io.StandardWriteOption;
 import org.apache.ratis.io.WriteOption;
 import org.apache.ratis.metrics.Timekeeper;
@@ -36,6 +38,8 @@ import org.apache.ratis.proto.RaftProtos.RaftClientRequestProto;
 import org.apache.ratis.protocol.ClientId;
 import org.apache.ratis.protocol.ClientInvocationId;
 import org.apache.ratis.protocol.DataStreamReply;
+import org.apache.ratis.protocol.DataStreamRequest;
+import org.apache.ratis.protocol.DataStreamRequestHeader;
 import org.apache.ratis.protocol.RaftClientReply;
 import org.apache.ratis.protocol.RaftClientRequest;
 import org.apache.ratis.protocol.RaftGroupId;
@@ -82,6 +86,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static org.apache.ratis.io.StandardWriteOption.CLOSE;
+import static org.apache.ratis.proto.RaftProtos.DataStreamPacketHeaderProto.Type.STREAM_CANCELER;
 
 public class DataStreamManagement {
   public static final Logger LOG = LoggerFactory.getLogger(DataStreamManagement.class);
@@ -432,6 +439,7 @@ public class DataStreamManagement {
     if (info != null) {
       info.getDivision().getDataStreamMap().remove(invocationId);
       info.getLocal().cleanUp();
+      info.applyToRemotes(out -> out.out.closeAsync());
     }
   }
 
@@ -555,5 +563,11 @@ public class DataStreamManagement {
   @Override
   public String toString() {
     return name;
+  }
+
+  private DataStreamRequest createCancelRequest(ClientInvocationId invocationId) {
+    final DataStreamRequestHeader h =
+        new DataStreamRequestHeader(invocationId.getClientId(), STREAM_CANCELER, invocationId.getLongId(),0L,0L, CLOSE);
+    return new DataStreamRequestByteBuffer(h, DataStreamPacketByteBuffer.EMPTY_BYTE_BUFFER);
   }
 }
