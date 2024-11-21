@@ -407,6 +407,7 @@ public class DataStreamManagement {
                 .remove(clientInvocationId);
             // 执行 LocalStream 的清理逻辑
             streamInfo.getLocal().cleanUp();
+            streamInfo.applyToRemotes(out -> out.out.closeAsync());
           });
     }
   }
