@@ -250,6 +250,7 @@ public class DataStreamManagement {
     this.requestTimeout = RaftClientConfigKeys.DataStream.requestTimeout(server.getProperties());
 
     this.nettyServerStreamRpcMetrics = metrics;
+    nettyServerStreamRpcMetrics.addFollowerGauges(channels::getTotalSize, streams::size);
   }
 
   void shutdown() {

@@ -22,11 +22,16 @@ import org.apache.ratis.metrics.MetricRegistryInfo;
 import org.apache.ratis.metrics.RatisMetricRegistry;
 import org.apache.ratis.metrics.RatisMetrics;
 import org.apache.ratis.metrics.Timekeeper;
+import org.apache.ratis.protocol.RaftPeerId;
+import org.apache.ratis.util.Timestamp;
 
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
+import java.util.function.IntSupplier;
+import java.util.function.LongSupplier;
+import java.util.function.Supplier;
 
 public class NettyServerStreamRpcMetrics extends RatisMetrics {
   private static final String METRICS_APP_NAME = "ratis_netty";
@@ -37,6 +42,8 @@ public class NettyServerStreamRpcMetrics extends RatisMetrics {
   private static final String METRICS_SUCCESS = "%s_success_reply_count";
   private static final String METRICS_FAIL = "%s_fail_reply_count";
   private static final String METRICS_NUM_REQUESTS = "num_requests_%s";
+  private static final String METRICS_CHANNEL_MAP_SIZE = "channel_map_size";
+  private static final String METRICS_STREAM_MAP_SIZE = "stream_map_size";
 
   public enum RequestType {
     CHANNEL_READ, HEADER, LOCAL_WRITE, REMOTE_WRITE, STATE_MACHINE_STREAM, START_TRANSACTION;
@@ -128,6 +135,11 @@ public class NettyServerStreamRpcMetrics extends RatisMetrics {
 
   public Timekeeper getLatencyTimer(RequestType type) {
     return latencyTimers.computeIfAbsent(type.getLatencyString(), getRegistry()::timer);
+  }
+
+  public void addFollowerGauges(IntSupplier getChannelMapSize, IntSupplier getStreamMapSize) {
+    getRegistry().gauge(METRICS_CHANNEL_MAP_SIZE, () -> getChannelMapSize::getAsInt);
+    getRegistry().gauge(METRICS_STREAM_MAP_SIZE, () -> getStreamMapSize::getAsInt);
   }
 
   private void inc(Op op, RequestType type) {
