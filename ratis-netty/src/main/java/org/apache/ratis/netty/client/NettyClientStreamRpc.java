@@ -477,14 +477,14 @@ public class NettyClientStreamRpc implements DataStreamClientRpc {
                 "Timeout " + timeout + ": Failed to send " + request + " via channel " + channel));
             replyMap.fail(requestEntry);
             // Send cancel request to the server
-            DataStreamRequest cancelRequest = createCancelRequest(request);
-            channel.writeAndFlush(cancelRequest).addListener(cancelFuture -> {
-              if (!cancelFuture.isSuccess()) {
-                LOG.warn("{}: Failed to send cancel request for {} to server: {}", this, request, cancelFuture.cause());
-              } else {
-                LOG.debug("{}: Sent cancel request for {} to server.", this, request);
-              }
-            });
+//            DataStreamRequest cancelRequest = createCancelRequest(request);
+//            channel.writeAndFlush(cancelRequest).addListener(cancelFuture -> {
+//              if (!cancelFuture.isSuccess()) {
+//                LOG.warn("{}: Failed to send cancel request for {} to server: {}", this, request, cancelFuture.cause());
+//              } else {
+//                LOG.debug("{}: Sent cancel request for {} to server.", this, request);
+//              }
+//            });
           }
         }, timeout.getDuration(), timeout.getUnit()));
       }
