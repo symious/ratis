@@ -491,8 +491,13 @@ public class DataStreamManagement {
         localWrite = CompletableFuture.completedFuture(0L);
         remoteWrites = Collections.emptyList();
       } else if (request.getType() == Type.STREAM_DATA) {
-        localWrite =
-            info.getLocal().write(request.slice(), request.getWriteOptionList(), writeExecutor);
+        if (close && request.getDataLength() == 0) {
+          info.getLocal().cleanUp();
+          localWrite = CompletableFuture.completedFuture(0L);
+        } else {
+          localWrite =
+              info.getLocal().write(request.slice(), request.getWriteOptionList(), writeExecutor);
+        }
         remoteWrites = info.applyToRemotes(out -> out.write(request, requestExecutor));
       } else {
         throw new IllegalStateException(
