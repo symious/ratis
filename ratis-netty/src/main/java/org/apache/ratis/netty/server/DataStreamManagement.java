@@ -455,7 +455,9 @@ public class DataStreamManagement {
     }
     if (request.getType() == Type.STREAM_CANCELER) {
       LOG.info("Receiving CANCELER request: " + request);
-      throw new IllegalStateException("Cancel request " + request);
+      removeDataStream(ctx.channel().id(), ClientInvocationId.valueOf(request.getClientId(), request.getStreamId()));
+      request.release();
+      return;
     }
 
     // add to ChannelMap
