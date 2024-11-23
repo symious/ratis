@@ -219,6 +219,13 @@ public class DataStreamManagement {
 
       return Collections.emptySet();
     }
+
+    void cleanUp(ClientInvocationId invocationId) {
+      LOG.debug("{}: Cleaning for clientInvocationId: {}, remotes: {}", this, invocationId, remotes);
+      getDivision().getDataStreamMap().remove(invocationId);
+      getLocal().cleanUp();
+      applyToRemotes(remote -> remote.out.closeAsync());
+    }
   }
 
   private final RaftServer server;
@@ -401,15 +408,7 @@ public class DataStreamManagement {
   void cleanUp(ChannelId channelId, Set<ClientInvocationId> ids) {
     for (ClientInvocationId clientInvocationId : ids) {
       Optional.ofNullable(streams.remove(channelId, clientInvocationId))
-          .ifPresent(streamInfo -> {
-            // 执行 DataStreamMap 的清理逻辑
-            streamInfo.getDivision()
-                .getDataStreamMap()
-                .remove(clientInvocationId);
-            // 执行 LocalStream 的清理逻辑
-            streamInfo.getLocal().cleanUp();
-            streamInfo.applyToRemotes(out -> out.out.closeAsync());
-          });
+          .ifPresent(streamInfo -> streamInfo.cleanUp(clientInvocationId));
     }
   }
 
@@ -429,20 +428,17 @@ public class DataStreamManagement {
       readImpl(request, ctx, getStreams);
     } catch (Throwable t) {
       replyDataStreamException(t, request, ctx);
-      removeDataStream(ctx.channel().id(), ClientInvocationId.valueOf(request.getClientId(), request.getStreamId()), null);
+      removeDataStream(ctx.channel().id(), ClientInvocationId.valueOf(request.getClientId(), request.getStreamId()));
     }
   }
 
-  private void removeDataStream(ChannelId id, ClientInvocationId invocationId, StreamInfo info) {
+  private StreamInfo removeDataStream(ChannelId id, ClientInvocationId invocationId) {
+    LOG.debug("{}: remove DataStream for channel: {}, clientInvocationId: {}", this, id, invocationId);
     final StreamInfo removed = streams.remove(id, invocationId);
-    if (info == null) {
-      info = removed;
+    if (removed != null) {
+      removed.cleanUp(invocationId);
     }
-    if (info != null) {
-      info.getDivision().getDataStreamMap().remove(invocationId);
-      info.getLocal().cleanUp();
-      info.applyToRemotes(out -> out.out.closeAsync());
-    }
+    return removed;
   }
 
   private void readImpl(DataStreamRequestByteBuf request, ChannelHandlerContext ctx,
@@ -522,7 +518,10 @@ public class DataStreamManagement {
       try {
         if (exception != null) {
           replyDataStreamException(server, exception, info.getRequest(), request, ctx);
-          removeDataStream(channelId, key, info);
+          final StreamInfo removed = removeDataStream(channelId, key);
+          if (removed != null) {
+            Preconditions.assertSame(info, removed, "removed");
+          }
         }
       } finally {
         request.release();
