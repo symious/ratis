@@ -23,7 +23,7 @@ import java.util.function.Consumer;
 
 public class AutoCloseableReadWriteLock {
   private final Object name;
-  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock(true);
+  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   private final AtomicInteger depth = new AtomicInteger();
 
   public AutoCloseableReadWriteLock(Object name) {

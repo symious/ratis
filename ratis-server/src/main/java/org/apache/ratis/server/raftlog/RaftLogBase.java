@@ -72,7 +72,7 @@ public abstract class RaftLogBase implements RaftLog {
   private final RaftGroupMemberId memberId;
   private final int maxBufferSize;
 
-  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock(true);
+  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   private final Runner runner = new Runner(this::getName);
   private final OpenCloseState state;
   private final LongSupplier getSnapshotIndexFromStateMachine;

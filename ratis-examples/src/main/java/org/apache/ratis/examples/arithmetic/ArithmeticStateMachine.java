@@ -55,7 +55,7 @@ public class ArithmeticStateMachine extends BaseStateMachine {
 
   private final SimpleStateMachineStorage storage = new SimpleStateMachineStorage();
 
-  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock(true);
+  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
   private AutoCloseableLock readLock() {
     return AutoCloseableLock.acquire(lock.readLock());
